@@ -9,8 +9,20 @@ using Facebook's Prophet library.
 
 import pandas as pd
 import numpy as np
-from prophet import Prophet
-from prophet.diagnostics import cross_validation, performance_metrics
+from typing import Dict, Tuple, Optional, Any
+
+# Prophet is an optional dependency used for forecasting. Import it lazily
+# so the package can be imported (e.g., for parts of the app that don't
+# require forecasting) even when prophet isn't installed in the environment.
+try:
+    from prophet import Prophet  # type: ignore
+    from prophet.diagnostics import cross_validation, performance_metrics  # type: ignore
+    _PROPHET_AVAILABLE = True
+except Exception:
+    Prophet = Any  # type: ignore
+    cross_validation = None  # type: ignore
+    performance_metrics = None  # type: ignore
+    _PROPHET_AVAILABLE = False
 from typing import Dict, Tuple, Optional
 import logging
 import warnings
@@ -68,7 +80,7 @@ def create_prophet_model(seasonality_mode: str = 'multiplicative',
                         seasonality_prior_scale: float = 10.0,
                         yearly_seasonality: bool = True,
                         weekly_seasonality: bool = True,
-                        daily_seasonality: bool = False) -> Prophet:
+                        daily_seasonality: bool = False) -> Any:
     """
     Create and configure a Prophet model.
     
@@ -92,8 +104,14 @@ def create_prophet_model(seasonality_mode: str = 'multiplicative',
     Prophet
         Configured Prophet model
     """
+    if not _PROPHET_AVAILABLE:
+        raise ImportError(
+            "The 'prophet' package is required for forecasting. "
+            "Install it with `pip install prophet` (or see requirements.txt)."
+        )
+
     logger.info("Creating Prophet model")
-    
+
     model = Prophet(
         seasonality_mode=seasonality_mode,
         changepoint_prior_scale=changepoint_prior_scale,
@@ -117,7 +135,7 @@ def create_prophet_model(seasonality_mode: str = 'multiplicative',
 
 
 def train_prophet_model(df: pd.DataFrame, 
-                       model: Optional[Prophet] = None) -> Prophet:
+                       model: Optional[Any] = None) -> Any:
     """
     Train a Prophet model on historical data.
     
@@ -146,7 +164,7 @@ def train_prophet_model(df: pd.DataFrame,
     return model
 
 
-def generate_forecast(model: Prophet, 
+def generate_forecast(model: Any, 
                      periods: int = 180,
                      freq: str = 'D') -> pd.DataFrame:
     """
@@ -166,6 +184,12 @@ def generate_forecast(model: Prophet,
     pd.DataFrame
         Forecast with predictions and confidence intervals
     """
+    if not _PROPHET_AVAILABLE:
+        raise ImportError(
+            "The 'prophet' package is required for forecasting. "
+            "Install it with `pip install prophet` (or see requirements.txt)."
+        )
+
     logger.info(f"Generating {periods} period forecast")
     
     # Create future dataframe
@@ -185,7 +209,7 @@ def generate_forecast(model: Prophet,
     return forecast_output
 
 
-def evaluate_forecast(model: Prophet, 
+def evaluate_forecast(model: Any, 
                      df: pd.DataFrame,
                      horizon: str = '30 days',
                      period: str = '90 days',
@@ -211,8 +235,14 @@ def evaluate_forecast(model: Prophet,
     pd.DataFrame
         Performance metrics (MAPE, RMSE, MAE)
     """
+    if not _PROPHET_AVAILABLE:
+        raise ImportError(
+            "The 'prophet' package is required for forecasting evaluation. "
+            "Install it with `pip install prophet` (or see requirements.txt)."
+        )
+
     logger.info("Evaluating forecast performance")
-    
+
     # Perform cross-validation
     df_cv = cross_validation(
         model, 
@@ -413,7 +443,7 @@ def forecast_by_category(df: pd.DataFrame,
 
 def complete_forecasting_pipeline(df: pd.DataFrame,
                                  output_dir: str = 'data/processed/',
-                                 forecast_periods: int = 180) -> Tuple[Prophet, pd.DataFrame]:
+                                 forecast_periods: int = 180) -> Tuple[Any, pd.DataFrame]:
     """
     Complete demand forecasting pipeline.
     

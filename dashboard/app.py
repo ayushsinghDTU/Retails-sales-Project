@@ -14,7 +14,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import sys
-sys.path.append('../src')
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import custom modules
 from src.data_processing import load_and_clean_data, aggregate_daily_sales
@@ -57,13 +59,30 @@ st.markdown("""
 @st.cache_data
 def load_data():
     """Load and cache data"""
-    try:
-        df = pd.read_csv('data/raw/transactions.csv')
-        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
-        return df
-    except FileNotFoundError:
-        st.error("Data file not found. Please run data generation script first.")
-        return None
+    # Resolve path relative to this file so loading works whether Streamlit
+    # is started from the repo root or another working directory.
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    candidates = [
+        os.path.join(project_root, 'data', 'raw', 'transactions.csv'),
+        os.path.join(os.getcwd(), 'data', 'raw', 'transactions.csv')
+    ]
+
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                df = pd.read_csv(path)
+                df['transaction_date'] = pd.to_datetime(df['transaction_date'])
+                return df
+            except Exception as e:
+                st.error(f"Error reading data file {path}: {e}")
+                return None
+
+    # If we reach here, no file was found at the expected locations
+    st.error(
+        "Data file not found. Please run the data generation script to create:\n"
+        f"{candidates[0]}"
+    )
+    return None
 
 
 @st.cache_data
